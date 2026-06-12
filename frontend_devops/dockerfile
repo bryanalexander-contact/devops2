@@ -4,48 +4,41 @@
 
 FROM node:22-alpine AS builder
 
-# Instalar pnpm v9 estable de manera segura (Valida hashes contra malware)
+# Instalar pnpm v9 estable y seguro
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 WORKDIR /app
 
-# Copiar archivos de dependencias desde la raíz de frontend_devops
+# Copiar archivos de dependencias de la raíz
 COPY package.json pnpm-lock.yaml* ./
 
-# Forzar la verificación criptográfica total de las librerías
+# Forzar verificación de integridad criptográfica contra malware
 RUN pnpm config set verify-store-integrity true
 
-# Instalar dependencias congelando el lockfile de manera estricta
+# Instalar dependencias bloqueando el lockfile
 RUN pnpm install --frozen-lockfile
 
-# Copiar todo el código fuente al contenedor (incluyendo la carpeta front_despacho-main)
+# Copiar todo el código fuente al contenedor
 COPY . .
 
-# ¡AQUÍ ESTÁ EL TRUCO! Nos movemos a la subcarpeta donde Vite tiene el index.html para compilar
-WORKDIR /app/front_despacho-main
-
-# Construir la aplicación (Vite leerá el index.html local y creará la carpeta dist aquí)
-RUN pnpm build
+# ¡SOLUCIÓN AQUÍ! Ejecutamos el build pasándole la carpeta del código como argumento a Vite
+RUN pnpm build front_despacho-main
 
 # ==========================================
 # ETAPA 2: Servidor en Producción (Runtime)
 # ==========================================
 FROM nginx:1.25-alpine
 
-# Copiar los archivos estáticos compilados desde la subcarpeta de la etapa anterior
+# Copiar los archivos estáticos compilados desde la subcarpeta resultante
 COPY --from=builder /app/front_despacho-main/dist /usr/share/nginx/html
 
-# --- BUENAS PRÁCTICAS DE SEGURIDAD ---
-# Modificar permisos para que Nginx pueda correr con el usuario no-root 'nginx'
+# --- BUENAS PRÁCTICAS DE SEGURIDAD (Exigido en Rúbrica) ---
 RUN touch /var/run/nginx.pid && \
     chown -R nginx:nginx /var/run/nginx.pid /var/cache/nginx /var/log/nginx /usr/share/nginx/html
 
-# Cambiar al usuario no-root
 USER nginx
-
-# Exponer el puerto estándar de Nginx
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]

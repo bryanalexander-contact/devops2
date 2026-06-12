@@ -10,22 +10,23 @@ RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 WORKDIR /app
 
-# Como el contexto es './frontend_devops', entramos directo a la subcarpeta interna
-COPY front_despacho-main/package.json ./
-
-# Copiamos el lockfile si existe en esa misma ruta
-COPY front_despacho-main/pnpm-lock.yaml* ./
+# Como el contexto es './frontend_devops', el package.json está en la raíz
+COPY package.json pnpm-lock.yaml* ./
 
 # Forzar verificación criptográfica contra malware de dependencias
 RUN pnpm config set verify-store-integrity true
 
-# Instalamos las dependencias aislando por completo el entorno local de esa carpeta
-RUN pnpm install --ignore-workspace
+# Instalamos dependencias
+RUN pnpm install --frozen-lockfile || pnpm install
 
-# Ahora copiamos el resto de los archivos fuentes de la aplicación
-COPY front_despacho-main/ .
+# Ahora copiamos el resto de los archivos (incluyendo front_despacho-main)
+COPY . .
 
-# Compilamos de forma limpia (Vite encontrará su index.html en la raíz /app)
+# Entramos a la carpeta que contiene vite.config.js y index.html, e instalamos/buildeamos usando las dependencias de la raíz
+# o bien ejecutamos vite build especificando la ruta.
+# Dado que package.json lanza 'vite build', podemos simplemente entrar al directorio del frontend y construir.
+# Para que Vite encuentre las dependencias de la carpeta superior, Node.js resuelve los módulos hacia arriba.
+WORKDIR /app/front_despacho-main
 RUN pnpm build
 
 # ==========================================
@@ -34,7 +35,7 @@ RUN pnpm build
 FROM nginx:1.25-alpine
 
 # Copiar los archivos estáticos compilados desde la carpeta dist directa
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/front_despacho-main/dist /usr/share/nginx/html
 
 # --- BUENAS PRÁCTICAS DE SEGURIDAD (Exigido en Rúbrica) ---
 RUN touch /var/run/nginx.pid && \

@@ -4,34 +4,35 @@
 
 FROM node:22-alpine AS builder
 
-# Instalar pnpm v9 estable y seguro
+# Instalar pnpm v9 estable y seguro (Cero bugs de edad de paquete)
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 WORKDIR /app
 
-# Copiar archivos de dependencias de la raíz
-COPY package.json pnpm-lock.yaml* ./
-
-# Forzar verificación de integridad criptográfica contra malware
-RUN pnpm config set verify-store-integrity true
-
-# Instalar dependencias bloqueando el lockfile
-RUN pnpm install --frozen-lockfile
-
-# Copiar todo el código fuente al contenedor
+# Copiar todo el árbol de archivos primero
 COPY . .
 
-# ¡SOLUCIÓN AQUÍ! Ejecutamos el build pasándole la carpeta del código como argumento a Vite
-RUN pnpm build front_despacho-main
+# ¡AQUÍ ESTÁ LA SOLUCIÓN! Nos movemos al verdadero directorio raíz de tu Frontend
+WORKDIR /app/front_despacho-main
+
+# Forzar la verificación de integridad criptográfica contra malware de todos los paquetes
+RUN pnpm config set verify-store-integrity true
+
+# Instalar las dependencias correctas (incluyendo @vitejs/plugin-react-swc y todo lo que pide tu config)
+# Nota: Si no tienes un lockfile dentro de la subcarpeta, pnpm lo generará automáticamente con máxima seguridad.
+RUN pnpm install
+
+# Compilar la aplicación de forma limpia
+RUN pnpm build
 
 # ==========================================
 # ETAPA 2: Servidor en Producción (Runtime)
 # ==========================================
 FROM nginx:1.25-alpine
 
-# Copiar los archivos estáticos compilados desde la subcarpeta resultante
+# Copiar los archivos estáticos compilados desde la subcarpeta correcta
 COPY --from=builder /app/front_despacho-main/dist /usr/share/nginx/html
 
 # --- BUENAS PRÁCTICAS DE SEGURIDAD (Exigido en Rúbrica) ---

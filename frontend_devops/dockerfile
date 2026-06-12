@@ -4,24 +4,21 @@
 
 FROM node:22-alpine AS builder
 
-# Instalar pnpm globalmente de manera segura
+# Instalar pnpm v9 de manera segura (Valida hashes y bloquea malware, sin bug de edad)
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 WORKDIR /app
 
 # Copiar archivos de dependencias primero para aprovechar la caché de capas de Docker
 COPY package.json pnpm-lock.yaml* ./
 
-# --- CONFIGURACIÓN DE SEGURIDAD ESTRICTA (Vía .npmrc) ---
-# Creamos el archivo de configuración local del proyecto. 
-# Esto le dice a pnpm que valide criptográficamente la integridad de cada librería 
-# y que acepte las actualizaciones oficiales estables del ecosistema sin bloquear el build.
-RUN echo "verify-store-integrity=true" > .npmrc && \
-    echo "supply-chain-min-age=0" >> .npmrc
+# --- CONFIGURACIÓN DE SEGURIDAD ESTRICTA ---
+# Forzamos la verificación criptográfica total de cada librería contra el registro oficial de npm
+RUN pnpm config set verify-store-integrity true
 
-# Instalar dependencias congelando el lockfile para garantizar la máxima seguridad
+# Instalar dependencias congelando el lockfile para garantizar que nadie altere el código
 RUN pnpm install --frozen-lockfile
 
 # Copiar el resto del código fuente

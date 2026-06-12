@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+
 import { Modal } from "./Modal";
 import { FormCierreDespacho } from "./FormCierreDespacho";
 
@@ -7,17 +7,19 @@ export const TableDespachos = () => {
   const [despachos, setDespachos] = useState([]);
 
   const despacho = async () => {
-    await axios
-      .get("http://TU_IP_PUBLICA_EC2:8081/api/v1/despachos", {
-        headers:{
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
+    try {
+      const response = await fetch("http://TU_IP_PUBLICA_EC2:8081/api/v1/despachos", {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
-      })
-      .then((response) => {
-        console.log(response.data);
-        setDespachos(response.data);
       });
+      const data = await response.json();
+      console.log(data);
+      setDespachos(data);
+    } catch (error) {
+      console.error("Error fetching despachos:", error);
+    }
   };
   // Llamada a la función para obtener los datos cuando el componente se monta
   useEffect(() => {

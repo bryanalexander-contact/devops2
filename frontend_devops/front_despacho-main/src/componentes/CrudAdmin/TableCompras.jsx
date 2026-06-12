@@ -1,21 +1,25 @@
 import { useState, useEffect } from "react";
 import { Modal } from "./Modal";
 import { FormDespacho } from "./FormDespacho";
-import axios from "axios";
+
 
 export const TableCompras = () => {
   const [ventas, setVentas] = useState([]);
 
   const compras = async () => {
-    await axios.get("http://TU_IP_PUBLICA_EC2:8082/api/v1/ventas", {
-      headers:{
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-  }
-    }).then((response) => {
-      console.log(response.data);
-      setVentas(response.data);
-    });
+    try {
+      const response = await fetch("http://TU_IP_PUBLICA_EC2:8082/api/v1/ventas", {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      const data = await response.json();
+      console.log(data);
+      setVentas(data);
+    } catch (error) {
+      console.error("Error fetching compras:", error);
+    }
   };
   // Llamada a la función para obtener los datos cuando el componente se monta
   useEffect(() => {

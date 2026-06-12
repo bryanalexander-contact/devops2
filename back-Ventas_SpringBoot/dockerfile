@@ -1,0 +1,25 @@
+# ETAPA 1: Construcción (Build)
+FROM maven:3.9-eclipse-temurin-17-alpine AS builder
+WORKDIR /app
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+COPY src ./src
+RUN mvn clean package -DskipTests
+
+# ETAPA 2: Entorno de Ejecución Seguro (Runtime)
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+
+# RÚBRICA: Ejecución con usuario No-Root por seguridad
+RUN addgroup -S springboot && adduser -S springboot -G springboot
+COPY --from=builder /app/target/*.jar app.jar
+
+# Asegurar los permisos de la carpeta de logs exigida
+RUN mkdir /app/logs && chown -R springboot:springboot /app
+
+USER springboot
+
+# Indicamos que guarde los logs en el volumen que mapeamos en el compose
+ENV LOGGING_FILE_NAME=/app/logs/backend.log
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -1,0 +1,20 @@
+# === FRONTEND (PNPM / Node) ===
+**/node_modules/
+**/.pnpm-store/
+**/dist/
+**/build/
+**/.next/
+**.env*.local
+
+# === BACKEND (Spring Boot / Maven / Gradle) ===
+**/target/
+**/.gradle/
+**/build/
+**/.idea/
+**/*.iml
+**/*.log
+
+# === ARCHIVOS DE SISTEMA Y LOGS DE DOCKER ===
+**/.DS_Store
+**/logs/
+**/mysql_data/

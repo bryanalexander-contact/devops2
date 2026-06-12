@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # Base de Datos MySQL (Simula tu entorno AWS RDS localmente)
+  mysql-db:
+    image: mysql:8.0
+    container_name: innovatech_mysql_db
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secure_password_123
+      MYSQL_DATABASE: innovatech_platform
+      MYSQL_USER: user_innovatech
+      MYSQL_PASSWORD: password_secure_123
+    ports:
+      - "3306:3306"
+    volumes:
+      # RÚBRICA: Persistencia de datos mediante volumen nombrado
+      - mysql_data:/var/lib/mysql
+    networks:
+      - network_innovatech
+
+  # Primer Microservicio Backend (El que tiene server.port=8081)
+  backend1:
+    build:
+      context: ./backend1
+      dockerfile: Dockerfile
+    container_name: innovatech_backend_1
+    ports:
+      - "8081:8081" # Mapea puerto 8081 interno al 8081 externo
+    environment:
+      - DB_ENDPOINT=mysql-db
+      - DB_PORT=3306
+      - DB_NAME=innovatech_platform
+      - DB_USERNAME=user_innovatech
+      - DB_PASSWORD=password_secure_123
+    volumes:
+      # RÚBRICA: Bind mount para guardar logs en tu entorno local/EC2
+      - ./backend1/logs:/app/logs
+    depends_on:
+      - mysql-db
+    networks:
+      - network_innovatech
+
+  # Segundo Microservicio Backend (El que asume puerto 8080 por defecto)
+  backend2:
+    build:
+      context: ./backend2
+      dockerfile: Dockerfile
+    container_name: innovatech_backend_2
+    ports:
+      - "8082:8080" # Mapea puerto 8080 interno al 8082 externo para que no choque con el otro backend
+    environment:
+      - DB_ENDPOINT=mysql-db
+      - DB_PORT=3306
+      - DB_NAME=innovatech_platform
+      - DB_USERNAME=user_innovatech
+      - DB_PASSWORD=password_secure_123
+    volumes:
+      - ./backend2/logs:/app/logs
+    depends_on:
+      - mysql-db
+    networks:
+      - network_innovatech
+
+  # Aplicación Frontend (PNPM)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: innovatech_frontend
+    ports:
+      - "80:80" # Tu puerto de acceso público en AWS EC2 o Localhost
+    depends_on:
+      - backend1
+      - backend2
+    networks:
+      - network_innovatech
+
+# RÚBRICA: Redes y Volúmenes aislados
+networks:
+  network_innovatech:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local

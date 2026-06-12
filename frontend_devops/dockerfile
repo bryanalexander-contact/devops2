@@ -1,0 +1,45 @@
+# ==========================================
+# ETAPA 1: Construcción (Build)
+# ==========================================
+FROM node:20-alpine AS builder
+
+# Instalar pnpm globalmente de manera segura
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+# Copiar archivos de dependencias primero para aprovechar la caché de capas de Docker
+COPY package.json pnpm-lock.yaml* ./
+
+# Instalar dependencias congelando el lockfile para evitar cambios inesperados
+RUN pnpm install --frozen-lockfile
+
+# Copiar el resto del código fuente
+COPY . .
+
+# Construir la aplicación (genera la carpeta /dist o /build)
+RUN pnpm build
+
+# ==========================================
+# ETAPA 2: Servidor en Producción (Runtime)
+# ==========================================
+FROM nginx:1.25-alpine
+
+# Copiar los archivos estáticos compilados desde la etapa anterior
+# NOTA: Cambia /app/dist por /app/build si tu framework compila en esa carpeta
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# --- BUENAS PRÁCTICAS DE SEGURIDAD (Exigido en Rúbrica) ---
+# Modificar permisos para que Nginx pueda correr con el usuario no-root 'nginx'
+RUN touch /var/run/nginx.pid && \
+    chown -R nginx:nginx /var/run/nginx.pid /var/cache/nginx /var/log/nginx /usr/share/nginx/html
+
+# Cambiar al usuario no-root
+USER nginx
+
+# Exponer el puerto estándar de Nginx
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

@@ -27,7 +27,7 @@ COPY . .
 # Dado que package.json lanza 'vite build', podemos simplemente entrar al directorio del frontend y construir.
 # Para que Vite encuentre las dependencias de la carpeta superior, Node.js resuelve los módulos hacia arriba.
 WORKDIR /app/front_despacho-main
-RUN pnpm build
+RUN npx vite build
 
 # ==========================================
 # ETAPA 2: Servidor en Producción (Runtime)
@@ -44,4 +44,4 @@ RUN touch /var/run/nginx.pid && \
 USER nginx
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]l
+CMD ["nginx", "-g", "daemon off;"]

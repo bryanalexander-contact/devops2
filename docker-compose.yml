@@ -40,7 +40,9 @@ services:
 
   # Segundo Microservicio Backend (El que asume puerto 8080 por defecto)
   backend2:
-    build: ./back-Ventas_SpringBoot/Springboot-API-REST
+    build:
+      context: ./back-Ventas_SpringBoot
+      dockerfile: dockerfile
     container_name: innovatech_backend_2
     ports:
       - "8082:8080" # Mapea puerto 8080 interno al 8082 externo para que no choque con el otro backend

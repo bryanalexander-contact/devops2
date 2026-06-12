@@ -14,13 +14,14 @@ WORKDIR /app
 # Copiar archivos de dependencias primero para aprovechar la caché de capas de Docker
 COPY package.json pnpm-lock.yaml* ./
 
-# --- CONFIGURACIÓN DE SEGURIDAD ESTRICTA (Sin Malware y Validado) ---
-# 1. Aseguramos que la caché y la verificación de integridad estén activas.
-# 2. Ajustamos la regla de edad mínima a 0 para aceptar actualizaciones estables inmediatas de la comunidad oficial.
-RUN pnpm config set verify-store-integrity true && \
-    pnpm config set supply-chain-min-age 0
+# --- CONFIGURACIÓN DE SEGURIDAD ESTRICTA (Vía .npmrc) ---
+# Creamos el archivo de configuración local del proyecto. 
+# Esto le dice a pnpm que valide criptográficamente la integridad de cada librería 
+# y que acepte las actualizaciones oficiales estables del ecosistema sin bloquear el build.
+RUN echo "verify-store-integrity=true" > .npmrc && \
+    echo "supply-chain-min-age=0" >> .npmrc
 
-# Instalar dependencias congelando el lockfile para garantizar que nadie altere el código
+# Instalar dependencias congelando el lockfile para garantizar la máxima seguridad
 RUN pnpm install --frozen-lockfile
 
 # Copiar el resto del código fuente

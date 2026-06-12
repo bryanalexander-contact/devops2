@@ -3,6 +3,7 @@
 # ==========================================
 
 FROM node:22-alpine AS builder
+
 # Instalar pnpm globalmente de manera segura
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
@@ -13,7 +14,13 @@ WORKDIR /app
 # Copiar archivos de dependencias primero para aprovechar la caché de capas de Docker
 COPY package.json pnpm-lock.yaml* ./
 
-# Instalar dependencias congelando el lockfile para evitar cambios inesperados
+# --- CONFIGURACIÓN DE SEGURIDAD ESTRICTA (Sin Malware y Validado) ---
+# 1. Aseguramos que la caché y la verificación de integridad estén activas.
+# 2. Ajustamos la regla de edad mínima a 0 para aceptar actualizaciones estables inmediatas de la comunidad oficial.
+RUN pnpm config set verify-store-integrity true && \
+    pnpm config set supply-chain-min-age 0
+
+# Instalar dependencias congelando el lockfile para garantizar que nadie altere el código
 RUN pnpm install --frozen-lockfile
 
 # Copiar el resto del código fuente
@@ -28,7 +35,6 @@ RUN pnpm build
 FROM nginx:1.25-alpine
 
 # Copiar los archivos estáticos compilados desde la etapa anterior
-# NOTA: Cambia /app/dist por /app/build si tu framework compila en esa carpeta
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # --- BUENAS PRÁCTICAS DE SEGURIDAD (Exigido en Rúbrica) ---

@@ -3,31 +3,29 @@
 # ==========================================
 FROM node:22-alpine AS builder
 
-# Configurar pnpm v9 seguro y estable
+# Configurar pnpm v9 estable
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 WORKDIR /app
 
-# ¡AQUÍ ESTÁ EL TRUCO DE AISLAMIENTO! 
-# Copiamos ÚNICAMENTE el contenido de tu frontend real a la raíz de compilación.
-# Al compilar desde './frontend_devops', metemos directamente lo que está en front_despacho-main.
+# Como el contexto es './frontend_devops', entramos directo a la subcarpeta interna
 COPY front_despacho-main/package.json ./
 
-# Si tienes un lockfile dentro de front_despacho-main, lo copiamos. Si no, pnpm lo generará en limpio.
+# Copiamos el lockfile si existe en esa misma ruta
 COPY front_despacho-main/pnpm-lock.yaml* ./
 
-# Forzar la verificación de integridad criptográfica contra malware de todos los paquetes
+# Forzar verificación criptográfica contra malware de dependencias
 RUN pnpm config set verify-store-integrity true
 
-# Instala de forma limpia las dependencias que tu código de React real requiere
-RUN pnpm install
+# Instalamos las dependencias aislando por completo el entorno local de esa carpeta
+RUN pnpm install --ignore-workspace
 
-# Copiamos el resto de los archivos fuentes de la subcarpeta directamente a /app
+# Ahora copiamos el resto de los archivos fuentes de la aplicación
 COPY front_despacho-main/ .
 
-# Ahora sí: pnpm, Vite e index.html están en el mismo nivel (/app)
+# Compilamos de forma limpia (Vite encontrará su index.html en la raíz /app)
 RUN pnpm build
 
 # ==========================================
@@ -35,7 +33,7 @@ RUN pnpm build
 # ==========================================
 FROM nginx:1.25-alpine
 
-# Los archivos compilados ahora se generan en /app/dist de forma directa
+# Copiar los archivos estáticos compilados desde la carpeta dist directa
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # --- BUENAS PRÁCTICAS DE SEGURIDAD (Exigido en Rúbrica) ---

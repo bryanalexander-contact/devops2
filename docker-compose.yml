@@ -20,9 +20,7 @@ services:
 
   # Primer Microservicio Backend (El que tiene server.port=8081)
   backend1:
-    build:
-      context: ./backend1
-      dockerfile: Dockerfile
+    build: ./back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO
     container_name: innovatech_backend_1
     ports:
       - "8081:8081" # Mapea puerto 8081 interno al 8081 externo
@@ -34,7 +32,7 @@ services:
       - DB_PASSWORD=password_secure_123
     volumes:
       # RÚBRICA: Bind mount para guardar logs en tu entorno local/EC2
-      - ./backend1/logs:/app/logs
+      - ./back-Despachos_SpringBoot/logs:/app/logs
     depends_on:
       - mysql-db
     networks:
@@ -42,9 +40,7 @@ services:
 
   # Segundo Microservicio Backend (El que asume puerto 8080 por defecto)
   backend2:
-    build:
-      context: ./backend2
-      dockerfile: Dockerfile
+    build: ./back-Ventas_SpringBoot/Springboot-API-REST
     container_name: innovatech_backend_2
     ports:
       - "8082:8080" # Mapea puerto 8080 interno al 8082 externo para que no choque con el otro backend
@@ -55,7 +51,7 @@ services:
       - DB_USERNAME=user_innovatech
       - DB_PASSWORD=password_secure_123
     volumes:
-      - ./backend2/logs:/app/logs
+      - ./back-Ventas_SpringBoot/logs:/app/logs
     depends_on:
       - mysql-db
     networks:
@@ -63,9 +59,7 @@ services:
 
   # Aplicación Frontend (PNPM)
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    build: ./frontend_devops
     container_name: innovatech_frontend
     ports:
       - "80:80" # Tu puerto de acceso público en AWS EC2 o Localhost

@@ -19,20 +19,22 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Construir y publicar las imágenes con versionamiento automático (etiqueta 'latest')
+      # Construir y publicar el Frontend usando su raíz real (donde está su dockerfile)
       - name: Build and Push Frontend
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/innovatech-frontend:latest ./frontend
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/innovatech-frontend:latest ./frontend_devops
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/innovatech-frontend:latest
 
+      # Construir y publicar el Backend 1 (Despachos)
       - name: Build and Push Backend 1
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/innovatech-backend1:latest ./backend1
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/innovatech-backend1:latest ./back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/innovatech-backend1:latest
 
+      # Construir y publicar el Backend 2 (Ventas)
       - name: Build and Push Backend 2
         run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/innovatech-backend2:latest ./backend2
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/innovatech-backend2:latest ./back-Ventas_SpringBoot/Springboot-API-REST
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/innovatech-backend2:latest
 
   deploy-to-ec2:
@@ -61,10 +63,10 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /home/ec2-user
-            # Modificar el docker-compose en caliente para usar las imágenes de Docker Hub
-            sed -i 's|build: ./frontend|image: '${{ secrets.DOCKERHUB_USERNAME }}'/innovatech-frontend:latest|g' docker-compose.yml
-            sed -i 's|build: ./backend1|image: '${{ secrets.DOCKERHUB_USERNAME }}'/innovatech-backend1:latest|g' docker-compose.yml
-            sed -i 's|build: ./backend2|image: '${{ secrets.DOCKERHUB_USERNAME }}'/innovatech-backend2:latest|g' docker-compose.yml
+            # Modificar el docker-compose en caliente mapeando las rutas exactas
+            sed -i 's|build: ./frontend_devops|image: '${{ secrets.DOCKERHUB_USERNAME }}'/innovatech-frontend:latest|g' docker-compose.yml
+            sed -i 's|build: ./back-Despachos_SpringBoot/Springboot-API-REST-DESPACHO|image: '${{ secrets.DOCKERHUB_USERNAME }}'/innovatech-backend1:latest|g' docker-compose.yml
+            sed -i 's|build: ./back-Ventas_SpringBoot/Springboot-API-REST|image: '${{ secrets.DOCKERHUB_USERNAME }}'/innovatech-backend2:latest|g' docker-compose.yml
             
             # En Amazon Linux se ejecuta con guion intermedio 'docker-compose'
             /usr/local/bin/docker-compose down || true

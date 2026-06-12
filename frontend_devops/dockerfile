@@ -1,30 +1,33 @@
 # ==========================================
 # ETAPA 1: Construcción (Build)
 # ==========================================
-
 FROM node:22-alpine AS builder
 
-# Instalar pnpm v9 estable y seguro (Cero bugs de edad de paquete)
+# Configurar pnpm v9 seguro y estable
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 WORKDIR /app
 
-# Copiar todo el árbol de archivos primero
-COPY . .
+# ¡AQUÍ ESTÁ EL TRUCO DE AISLAMIENTO! 
+# Copiamos ÚNICAMENTE el contenido de tu frontend real a la raíz de compilación.
+# Al compilar desde './frontend_devops', metemos directamente lo que está en front_despacho-main.
+COPY front_despacho-main/package.json ./
 
-# ¡AQUÍ ESTÁ LA SOLUCIÓN! Nos movemos al verdadero directorio raíz de tu Frontend
-WORKDIR /app/front_despacho-main
+# Si tienes un lockfile dentro de front_despacho-main, lo copiamos. Si no, pnpm lo generará en limpio.
+COPY front_despacho-main/pnpm-lock.yaml* ./
 
 # Forzar la verificación de integridad criptográfica contra malware de todos los paquetes
 RUN pnpm config set verify-store-integrity true
 
-# Instalar las dependencias correctas (incluyendo @vitejs/plugin-react-swc y todo lo que pide tu config)
-# Nota: Si no tienes un lockfile dentro de la subcarpeta, pnpm lo generará automáticamente con máxima seguridad.
+# Instala de forma limpia las dependencias que tu código de React real requiere
 RUN pnpm install
 
-# Compilar la aplicación de forma limpia
+# Copiamos el resto de los archivos fuentes de la subcarpeta directamente a /app
+COPY front_despacho-main/ .
+
+# Ahora sí: pnpm, Vite e index.html están en el mismo nivel (/app)
 RUN pnpm build
 
 # ==========================================
@@ -32,8 +35,8 @@ RUN pnpm build
 # ==========================================
 FROM nginx:1.25-alpine
 
-# Copiar los archivos estáticos compilados desde la subcarpeta correcta
-COPY --from=builder /app/front_despacho-main/dist /usr/share/nginx/html
+# Los archivos compilados ahora se generan en /app/dist de forma directa
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 # --- BUENAS PRÁCTICAS DE SEGURIDAD (Exigido en Rúbrica) ---
 RUN touch /var/run/nginx.pid && \
